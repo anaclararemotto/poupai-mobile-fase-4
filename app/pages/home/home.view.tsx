@@ -13,9 +13,9 @@ export const HomeView = () => {
   const { user } = useAuth();
   const userName = user?.displayName || "Usuário";
 
-  function renderBody(): import("react").ReactNode {
-    throw new Error("Function not implemented.");
-  }
+  // function renderBody(): import("react").ReactNode {
+  //   throw new Error("Function not implemented.");
+  // }
 
   return (
     <View style={styles.container}>
@@ -40,7 +40,8 @@ export const HomeView = () => {
       </View>
 
 <View style={styles.listContainer}>
-  {renderBody()}
+  {/* {renderBody()} */}
+  <Text style={styles.text}>Minhas Transações</Text>
 </View>
 
       

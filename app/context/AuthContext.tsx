@@ -1,61 +1,67 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-// --- MUDANÇA 1: Importar a função de login do Firebase e o tipo User ---
 import { AppUser } from '@/app/services/auth/auth.service';
 import { auth } from '@/firebaseConfig';
-import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+// --- ALTERAÇÃO 1: Importar o 'signOut' ---
+import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 interface AuthContextType {
-  user: AppUser | null;
-  authLoading: boolean;
-  // --- MUDANÇA 2: Adicionar a assinatura da função 'login' à nossa interface ---
-  login: (email: string, password: string) => Promise<void>;
-  // No futuro, você também terá 'logout', 'signup', etc. aqui
+  user: AppUser | null;
+  authLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>; // --- ALTERAÇÃO 2: Adicionar 'logout' à interface ---
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-      setUser(firebaseUser as AppUser | null);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+      setUser(firebaseUser as AppUser | null);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  // --- MUDANÇA 3: Criar a função de login que chama o Firebase ---
-  const login = async (email: string, password: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Você não precisa fazer mais nada aqui (como navegar ou chamar setUser).
-      // O 'onAuthStateChanged' acima vai detectar a mudança, atualizar o estado 'user', 
-      // e o _layout.tsx fará o redirecionamento para a Home automaticamente.
-    } catch (error) {
-      // Se o login do Firebase falhar, o erro será "lançado" para a tela de Login,
-      // que o pegará no bloco 'catch' e mostrará o Alert para o usuário.
-      console.error("ERRO DE LOGIN NO CONTEXTO:", error);
-      throw error;
-    }
-  };
+  const login = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error("ERRO DE LOGIN NO CONTEXTO:", error);
+      throw error;
+    }
+  };
 
-  const value = {
-    user,
-    authLoading,
-    login, // --- MUDANÇA 4: Fornecer a função de login para o resto do app ---
-  };
+  // --- ALTERAÇÃO 3: Implementar a função de logout ---
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      // O onAuthStateChanged vai ser acionado automaticamente,
+      // o 'user' se tornará 'null', e o _layout.js vai
+      // redirecionar para a tela de Login.
+    } catch (error) {
+      console.error("ERRO AO SAIR:", error);
+      throw error;
+    }
+  };
 
-  // Removi o setUser do value. É uma boa prática que apenas o AuthProvider
-  // possa modificar o estado do usuário através de funções como login() ou logout().
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
+  const value = {
+    user,
+    authLoading,
+    login,
+    logout, // --- ALTERAÇÃO 4: Fornecer a função 'logout' ---
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
 };
